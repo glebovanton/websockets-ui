@@ -16,7 +16,7 @@ httpServer.listen(HTTP_PORT, ()=> {
 });
 
 webSocketServer.on('connection', (ws) => {
-    const id = generateUid();
+    const id: string = generateUid();
 
     ws.on('message', (data) => {
         const message = data.toString();
