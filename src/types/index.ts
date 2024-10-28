@@ -8,7 +8,7 @@ export const ResponseType = {
     Turn: 'turn',
     Finish: 'finish',
     CreateRoom: 'create_room',
-    randomAttack: 'randomAttack',
+    RandomAttack: 'randomAttack',
     UpdateRoom: 'update_room',
     UpdateWinners: 'update_winners',
     SinglePlay: 'single_play',

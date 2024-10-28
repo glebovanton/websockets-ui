@@ -30,7 +30,7 @@ httpServer.listen(HTTP_PORT, ()=> {
 webSocketServer.on('connection', (ws: WebSocketServer): void => {
     const id: string = generateUid();
 
-    ws.on('message', (data) => {
+    ws.on('message', (data,isBinary: boolean = false) => {
         const message: string = data.toString();
         const messageAsObject = JSON.parse(message);
         let user: User = {
@@ -162,7 +162,7 @@ webSocketServer.on('connection', (ws: WebSocketServer): void => {
                 }
                 break;
 
-            case ResponseType.randomAttack:
+            case ResponseType.RandomAttack:
                 ({ indexPlayer, gameId } = user);
                 currentGame = currentGames?.find((game) => game.roomId === gameId);
                 currentGame && indexPlayer && ({ board, hitBoard } = findEnemy(currentGame, indexPlayer));
@@ -187,6 +187,17 @@ webSocketServer.on('connection', (ws: WebSocketServer): void => {
                 }
 
                 break;
+
+            case ResponseType.SinglePlay:
+                webSocketServer.clients.forEach((client) => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify(messageAsObject), { binary: isBinary });
+                    }
+                });
+                break;
+
+            default:
+                console.error('Unknown command');
 
         }
     });
