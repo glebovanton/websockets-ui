@@ -15,10 +15,12 @@ export const ResponseType = {
 };
 
 export interface User {
+    gameId?: string;
     name?: string;
     password?: string;
     index: string;
     indexRoom?: string;
+    indexPlayer?: string;
     error?: boolean;
     errorText?: string;
     ws?: WebSocket;

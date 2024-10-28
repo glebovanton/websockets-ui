@@ -9,10 +9,11 @@ import {
     findUserByName,
     generateUid,
     updateRooms,
-    updateWinners
+    updateWinners,
+    startGame
 } from "./src/helpers";
-import {ResponseType, Room, User } from "./src/types";
-import { rooms, users } from "./src/db";
+import { Game, Room, ResponseType, User } from "./src/types";
+import { currentGames,rooms, users } from "./src/db";
 
 const { HOST = 'localhost', HTTP_PORT = 8181, WEBSOCKET_PORT = 3000 } = process.env;
 
@@ -38,6 +39,8 @@ webSocketServer.on('connection', (ws) => {
         };
         let existingUser: User | undefined;
         let roomId: string | undefined;
+        let gameId: string | undefined;
+        let currentGame: Game | undefined;
 
         if (messageAsObject.data) {
             messageAsObject.data = JSON.parse(messageAsObject.data);
@@ -122,6 +125,16 @@ webSocketServer.on('connection', (ws) => {
                     createGame(roomId as string);
                     const currentRoomIndex: number = findRoomIndex(roomId as string);
                     rooms.splice(currentRoomIndex, 1);
+                }
+                break;
+
+            case ResponseType.AddShips:
+                ({ gameId } = user);
+                currentGame = currentGames.find((game: Game) => game.roomId === gameId);
+                currentGame?.players.push(user);
+
+                if (currentGame?.players && currentGame.players.length > 1) {
+                    startGame(currentGame);
                 }
                 break;
 
