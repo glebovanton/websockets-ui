@@ -5,12 +5,14 @@ import { webSocketServer } from "./src/websocket"
 import {
     attackFeedback,
     createGame,
+    findCellToAttack,
     findEnemy,
     findRoom,
     findRoomIndex,
     findUser,
     findUserByName,
     generateUid,
+    isUndefined,
     updateRooms,
     updateWinners,
     startGame
@@ -158,6 +160,32 @@ webSocketServer.on('connection', (ws: WebSocketServer): void => {
                         attackFeedback(currentGame, indexPlayer, board, hitBoard, x, y, webSocketServer);
                     }
                 }
+                break;
+
+            case ResponseType.randomAttack:
+                ({ indexPlayer, gameId } = user);
+                currentGame = currentGames?.find((game) => game.roomId === gameId);
+                currentGame && indexPlayer && ({ board, hitBoard } = findEnemy(currentGame, indexPlayer));
+
+                if (hitBoard) {
+                    const cell = findCellToAttack(hitBoard);
+
+                    if (cell && cell.x !== undefined && cell.y !== undefined) {
+                        const { x, y } = cell;
+
+                        if (
+                            currentGame &&
+                            indexPlayer !== undefined &&
+                            board &&
+                            currentGame.idOfPlayersTurn === indexPlayer &&
+                            !hitBoard[y][x]
+                        ) {
+                            hitBoard[y][x] = true;
+                            attackFeedback(currentGame, indexPlayer, board, hitBoard, x, y, webSocketServer);
+                        }
+                    }
+                }
+
                 break;
 
         }

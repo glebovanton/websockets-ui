@@ -1,6 +1,6 @@
 import { WebSocketServer } from 'ws';
 import { users } from "../db";
-import {Game, ResponseType, Room, ShipTakenShots, User, Winner} from "../types";
+import { Cell, Game, ResponseType, Room, ShipTakenShots, User, Winner} from "../types";
 import { currentGames, rooms, winners } from "../db";
 
 export const attackAllNearbyCells = (x: number, y: number, ws: WebSocketServer, indexPlayer: string, board: boolean[][]): void => {
@@ -142,9 +142,24 @@ export const createGame = (roomId: string): void => {
     });
 };
 
+export const crnd = (min: number, max: number): number => {
+    return +(Math.random() * (max - min) + min).toFixed();
+};
+
 export const findEnemy = (currentGame: Game, currentPlayerId: string):  User => {
     const { players } = currentGame;
     return players.filter((player: User) => player.indexPlayer !== currentPlayerId)[0];
+};
+
+export const findCellToAttack = (hitBoard: boolean[][]): Cell | undefined => {
+    let x, y;
+    x = crnd(0, 9);
+    y = crnd(0, 9);
+    if (!hitBoard[y][x]) {
+        return { x, y };
+    } else {
+        findCellToAttack(hitBoard);
+    }
 };
 
 export const findRoomIndex = (roomId: string): number => rooms.findIndex((room) => room.roomId === roomId);
@@ -254,6 +269,10 @@ export const updateTurn = (currentGame, indexPlayer, ws, isLanded = false) => {
         }),
     );
 };
+
+export function isUndefined (value: any): boolean {
+    return typeof value === 'undefined' || value === 'undefined';
+}
 
 export const updateWinners = (wss: WebSocketServer): void => {
     const formResponse = JSON.stringify({

@@ -43,6 +43,11 @@ export interface Game {
     players: User[]
 }
 
+export interface Cell {
+    x: number;
+    y: number
+}
+
 export interface ShipTakenShots {
     x1: number;
     y1: number
