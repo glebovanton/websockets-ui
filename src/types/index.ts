@@ -19,7 +19,11 @@ export interface User {
     password?: string;
     index: string;
     indexRoom?: number;
-    error: boolean;
-    errorText: string;
+    error?: boolean;
+    errorText?: string;
     ws?: WebSocket;
 }
+
+export interface Room {
+    roomId: string;
+    roomUsers: User[] }

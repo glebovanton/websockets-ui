@@ -1,14 +1,13 @@
 import dotenv from 'dotenv';
 import { httpServer } from "./src/http_server";
 import { webSocketServer } from "./src/websocket"
-import { findUserByName, generateUid, updateRooms, updateWinners } from "./src/helpers";
+import { findRoom, findUser, findUserByName, generateUid, updateRooms, updateWinners } from "./src/helpers";
 import {ResponseType, User } from "./src/types";
-import { users } from "./src/db";
+import { rooms, users } from "./src/db";
 
 dotenv.config();
 
 const { HOST = 'localhost', HTTP_PORT = 8181, WEBSOCKET_PORT = 3000 } = process.env;
-
 
 httpServer.listen(HTTP_PORT, ()=> {
     console.log(`Start static http server on the port ${HTTP_PORT} & PID: ${process.pid}. Visit: http://${HOST}:${HTTP_PORT}/`);
@@ -19,9 +18,9 @@ webSocketServer.on('connection', (ws) => {
     const id: string = generateUid();
 
     ws.on('message', (data) => {
-        const message = data.toString();
+        const message: string = data.toString();
         const messageAsObject = JSON.parse(message);
-        let user: User= {
+        let user: User = {
             index: id,
             name: messageAsObject.name,
             indexRoom: undefined,
@@ -30,8 +29,8 @@ webSocketServer.on('connection', (ws) => {
             errorText: '',
             password: undefined
         };
-        let existingUser;
-        let roomId;
+        let existingUser: User | undefined;
+        let roomId: number | undefined;
 
         if (messageAsObject.data) {
             messageAsObject.data = JSON.parse(messageAsObject.data);
@@ -44,6 +43,7 @@ webSocketServer.on('connection', (ws) => {
         }
 
         switch (messageAsObject.type) {
+
             case ResponseType.Reg:
                 user.index = id;
                 user.error = false;
@@ -74,6 +74,29 @@ webSocketServer.on('connection', (ws) => {
                 }
 
                 break;
+
+            case ResponseType.CreateRoom:
+                const foundPlayer: User | undefined = findUser(id);
+                const newRoomId: string= generateUid();
+
+                if (!foundPlayer) {
+                    break;
+                }
+
+                const newRoom = {
+                    roomId: newRoomId,
+                    roomUsers: [
+                        {
+                            name: foundPlayer.name,
+                            index: foundPlayer.index,
+                        },
+                    ],
+                };
+                rooms.push(newRoom);
+                updateRooms(webSocketServer);
+                break;
+
+
         }
     });
 });
