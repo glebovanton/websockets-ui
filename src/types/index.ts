@@ -28,8 +28,15 @@ export interface User {
     y?: number;
     board?: boolean[][];
     hitBoard?: boolean[][];
-    ships?: any[];
+    ships?: Ship[];
     shipsWrecked?: number;
+}
+
+export interface Ship {
+    length: number;
+    position: Cell;
+    direction: boolean;
+    isWrecked: boolean;
 }
 
 export interface Room {
@@ -56,4 +63,10 @@ export interface ShipTakenShots {
 export interface Winner {
     name: string;
     wins: number;
+}
+
+export enum AttackStatus {
+    Miss = 'miss',
+    Shot = 'shot',
+    Killed = 'killed',
 }

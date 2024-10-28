@@ -1,44 +1,36 @@
-import { WebSocketServer } from 'ws';
-import { users } from "../db";
-import { Cell, Game, ResponseType, Room, ShipTakenShots, User, Winner} from "../types";
-import { currentGames, rooms, winners } from "../db";
+import { WebSocket, WebSocketServer } from 'ws';
+import { AttackStatus, Cell, Game, ResponseType, Room, ShipTakenShots, User, Winner } from "../types";
+import { currentGames, rooms, users, winners } from "../db";
 
-export const attackAllNearbyCells = (x: number, y: number, ws: WebSocketServer, indexPlayer: string, board: boolean[][]): void => {
-    const nearbyCells = [
-        { x: x - 1, y: y - 1 },
-        { x, y: y - 1 },
-        { x: x + 1, y: y - 1 },
-
-        { x: x - 1, y },
-        { x: x + 1, y },
-
-        { x: x - 1, y: y + 1 },
-        { x: x, y: y + 1 },
-        { x: x + 1, y: y + 1 },
+export const attackAllNearbyCells = (x: number, y: number, ws: WebSocket, indexPlayer: string, board: boolean[][]): void => {
+    const offsets : number[][] = [
+        [-1, -1], [0, -1], [1, -1],
+        [-1, 0], [1, 0],
+        [-1, 1], [0, 1], [1, 1],
     ];
 
-    nearbyCells.forEach((cell) => {
-        const x = cell?.x;
-        const y = cell?.y;
+    offsets.forEach(([dx, dy]: number[]): void => {
+        const newX: number = x + dx;
+        const newY: number = y + dy;
 
-        if (!board[y][x]) {
-            ws.send(attackFeedbackResponse(x, y, indexPlayer, 'miss'));
+        if (board[newY]?.[newX] === false) {
+            ws.send(attackFeedbackResponse(newX, newY, indexPlayer, AttackStatus.Miss));
         }
     });
 };
 
 export const attackFeedback = (currentGame: Game, indexPlayer: string, board: boolean[][], hitBoard: boolean[][], x: number, y: number, wss: WebSocketServer): void => {
-    const currentGameWebsockets = getCurrentGameWebsockets(currentGame);
-    const enemyPlayer = findEnemy(currentGame, indexPlayer);
+    const currentGameWebsockets: WebSocket[] = getCurrentGameWebsockets(currentGame);
+    const enemyPlayer: User = findEnemy(currentGame, indexPlayer);
     const { ships } = enemyPlayer;
 
-    let status = 'miss';
-    let isLanded = false;
+    let status: string = AttackStatus.Miss;
+    let isLanded: boolean = false;
     if (board[y][x]) {
-        status = 'shot';
+        status = AttackStatus.Shot;
         isLanded = true;
 
-        currentGameWebsockets.forEach((ws) => {
+        currentGameWebsockets.forEach((ws: WebSocket): void => {
             ws.send(attackFeedbackResponse(x, y, indexPlayer, status));
             updateTurn(currentGame, indexPlayer, ws, isLanded);
         });
@@ -85,7 +77,7 @@ export const attackFeedback = (currentGame: Game, indexPlayer: string, board: bo
                 currentGameWebsockets.forEach((ws) => {
                     thisShipTakenShots.forEach((cell) => {
                         const { x1, y1 } = cell;
-                        ws.send(attackFeedbackResponse(x1, y1, indexPlayer, 'killed'));
+                        ws.send(attackFeedbackResponse(x1, y1, indexPlayer, AttackStatus.Killed));
                         attackAllNearbyCells(x1, y1, ws, indexPlayer, board);
                     });
                     updateTurn(currentGame, indexPlayer, ws, isLanded);
@@ -102,7 +94,7 @@ export const attackFeedback = (currentGame: Game, indexPlayer: string, board: bo
 
 export const attackFeedbackResponse = (x: number, y: number, indexPlayer: string, status: string): string => {
     return JSON.stringify({
-        type: 'attack',
+        type: ResponseType.Attack,
         data: JSON.stringify({
             position: {
                 x,
@@ -164,7 +156,7 @@ export const findCellToAttack = (hitBoard: boolean[][]): Cell | undefined => {
 
 export const findRoomIndex = (roomId: string): number => rooms.findIndex((room) => room.roomId === roomId);
 
-export const finishGame = (wss, currentGameWebsockets, currentGame, indexPlayer) => {
+export const finishGame = (wss: WebSocketServer, currentGameWebsockets: WebSocket[], currentGame: Game, indexPlayer: string) => {
     const winner = findUser(indexPlayer);
     const id = currentGame.roomId;
     currentGames.splice(
@@ -200,8 +192,8 @@ export const finishGame = (wss, currentGameWebsockets, currentGame, indexPlayer)
 };
 
 
-export const generatePlayerBoard = (player) => {
-    player.ships.forEach((ship) => {
+export const generatePlayerBoard = (player: User): void => {
+    player?.ships?.forEach((ship) => {
         const { board } = player;
         const {
             position: { x, y },
@@ -214,7 +206,9 @@ export const generatePlayerBoard = (player) => {
         const shipEndCoordinate = i + length;
 
         while (i < shipEndCoordinate) {
-            board[direction ? i : y][direction ? x : i] = true;
+            if (board) {
+                board[direction ? i : y][direction ? x : i] = true;
+            }
             i++;
         }
     });
@@ -225,7 +219,7 @@ export const generateUid = function () : string {
 };
 
 export const getCurrentGameWebsockets = (currentGame) => {
-    const currentGameWebsockets: WebSocketServer[] = [];
+    const currentGameWebsockets: WebSocket[] = [];
     currentGame.players.forEach((player) => {
         const playerWebSocket: WebSocket | undefined = findUser(player.indexPlayer)?.ws;
 
@@ -236,7 +230,7 @@ export const getCurrentGameWebsockets = (currentGame) => {
 };
 
 export const updateRooms = (wss: WebSocketServer): void => {
-    wss.clients.forEach((client) => {
+    wss.clients.forEach((client: WebSocket): void => {
         const formResponse = {
             type: ResponseType.UpdateRoom,
             data: JSON.stringify(rooms),
@@ -253,10 +247,10 @@ export const findUser = (id: string): User | undefined =>
 
 export const findUserByName = (name: string | undefined): User | undefined => users.find((player) => player.name === name);
 
-export const updateTurn = (currentGame, indexPlayer, ws, isLanded = false) => {
+export const updateTurn = (currentGame: Game, indexPlayer: string, ws: WebSocket, isLanded: boolean = false): void => {
     if (!isLanded) {
-        const nextPlayer = findEnemy(currentGame, indexPlayer);
-        ({ indexPlayer } = nextPlayer);
+        const nextPlayer: User = findEnemy(currentGame, indexPlayer);
+        nextPlayer?.indexPlayer && ({ indexPlayer } = nextPlayer);
     }
     currentGame.idOfPlayersTurn = indexPlayer;
     ws.send(
@@ -270,37 +264,35 @@ export const updateTurn = (currentGame, indexPlayer, ws, isLanded = false) => {
     );
 };
 
-export function isUndefined (value: any): boolean {
-    return typeof value === 'undefined' || value === 'undefined';
-}
-
 export const updateWinners = (wss: WebSocketServer): void => {
-    const formResponse = JSON.stringify({
+    const formResponse: string = JSON.stringify({
         type: ResponseType.UpdateWinners,
         data: JSON.stringify(winners),
         id: 0,
     });
 
-    wss.clients.forEach((client) => {
+    wss.clients.forEach((client: WebSocket): void => {
         client.send(formResponse);
     });
 };
 
-export const startGame = (currentGame) => {
+export const startGame = (currentGame: Game): void => {
     currentGame.players.forEach(({ indexPlayer, ships }) => {
-        const currentPlayer : User | undefined = findUser(indexPlayer);
-        const currentPlayerWebsocket: WebSocket | undefined = currentPlayer?.ws;
+        if (indexPlayer && ships) {
+            const currentPlayer : User | undefined = findUser(indexPlayer);
+            const currentPlayerWebsocket: WebSocket | undefined = currentPlayer?.ws;
 
-        currentPlayerWebsocket?.send(
-            JSON.stringify({
-                type: ResponseType.StartGame,
-                data: JSON.stringify({
-                    ships: [...ships],
-                    currentPlayerIndex: indexPlayer,
+            currentPlayerWebsocket?.send(
+                JSON.stringify({
+                    type: ResponseType.StartGame,
+                    data: JSON.stringify({
+                        ships: [...ships],
+                        currentPlayerIndex: indexPlayer,
+                    }),
+                    id: 0,
                 }),
-                id: 0,
-            }),
-        );
+            );
+        }
     });
 
     currentGame.players.forEach((player) => {
@@ -310,8 +302,11 @@ export const startGame = (currentGame) => {
 
         generatePlayerBoard(player);
 
-        const currentPlayer: User | undefined = findUser(player.indexPlayer);
-        const currentPlayerWebsocket: WebSocket | undefined = currentPlayer?.ws;
-        updateTurn(currentGame, currentGame.players[1].indexPlayer, currentPlayerWebsocket);
+        if (player.indexPlayer && currentGame.players[1].indexPlayer) {
+            const currentPlayer: User | undefined = findUser(player.indexPlayer);
+            const currentPlayerWebsocket: WebSocket | undefined = currentPlayer?.ws;
+
+            updateTurn(currentGame, currentGame.players[1].indexPlayer, currentPlayerWebsocket);
+        }
     });
 };

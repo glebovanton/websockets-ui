@@ -1,4 +1,4 @@
-import { WebSocketServer } from "ws";
+import { WebSocket } from "ws";
 import 'dotenv/config'
 import { httpServer } from "./src/http_server";
 import { webSocketServer } from "./src/websocket"
@@ -12,7 +12,6 @@ import {
     findUser,
     findUserByName,
     generateUid,
-    isUndefined,
     updateRooms,
     updateWinners,
     startGame
@@ -27,10 +26,10 @@ httpServer.listen(HTTP_PORT, ()=> {
     console.log(`Websocket on the ${WEBSOCKET_PORT} port!`);
 });
 
-webSocketServer.on('connection', (ws: WebSocketServer): void => {
+webSocketServer.on('connection', (ws: WebSocket): void => {
     const id: string = generateUid();
 
-    ws.on('message', (data,isBinary: boolean = false) => {
+    ws.on('message', (data: WebSocket.Data, isBinary: boolean) => {
         const message: string = data.toString();
         const messageAsObject = JSON.parse(message);
         let user: User = {
@@ -153,7 +152,7 @@ webSocketServer.on('connection', (ws: WebSocketServer): void => {
                 currentGame = currentGames.find((game) => game.roomId === gameId);
                 currentGame && indexPlayer && ({ board, hitBoard } = findEnemy(currentGame, indexPlayer));
 
-                if ((currentGame?.idOfPlayersTurn === indexPlayer) && x && y && !hitBoard?.[y][x]) {
+                if ((currentGame?.idOfPlayersTurn === indexPlayer) && x !== undefined && y !== undefined && !hitBoard?.[y][x]) {
                     hitBoard && ( hitBoard[y][x] = true );
 
                     if (currentGame && indexPlayer && board && hitBoard) {
@@ -189,17 +188,25 @@ webSocketServer.on('connection', (ws: WebSocketServer): void => {
                 break;
 
             case ResponseType.SinglePlay:
-                webSocketServer.clients.forEach((client) => {
+                webSocketServer.clients.forEach((client: WebSocket) => {
                     if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify(messageAsObject), { binary: isBinary });
                     }
                 });
+
                 break;
 
             default:
                 console.error('Unknown command');
 
         }
+    });
+
+    ws.on('close', () => {
+        users.splice(
+            users.findIndex((user) => user.index === id),
+            1,
+        );
     });
 });
 

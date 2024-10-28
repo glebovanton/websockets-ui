@@ -1,4 +1,4 @@
-import {Game, Room, User, Winner} from '../types';
+import { Game, Room, User, Winner } from '../types';
 
 export const users: User[] = [];
 export const rooms: Room[] = [];
