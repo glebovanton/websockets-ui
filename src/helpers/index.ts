@@ -163,9 +163,8 @@ export const findEnemy = (currentGame: Game, currentPlayerId: string): User => {
 };
 
 export const findCellToAttack = (hitBoard: boolean[][]): Cell | undefined => {
-  let x, y;
-  x = crnd(0, 9);
-  y = crnd(0, 9);
+  const x: number = crnd(0, 9);
+  const y: number = crnd(0, 9);
   if (!hitBoard[y][x]) {
     return { x, y };
   } else {
