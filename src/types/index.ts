@@ -18,7 +18,7 @@ export interface User {
     name?: string;
     password?: string;
     index: string;
-    indexRoom?: number;
+    indexRoom?: string;
     error?: boolean;
     errorText?: string;
     ws?: WebSocket;
@@ -26,4 +26,10 @@ export interface User {
 
 export interface Room {
     roomId: string;
-    roomUsers: User[] }
+    roomUsers: User[]
+}
+
+export interface Game {
+    roomId: string;
+    players: User[]
+}

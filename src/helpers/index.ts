@@ -1,7 +1,36 @@
 import { WebSocketServer } from 'ws';
 import { users } from "../db";
-import {ResponseType, Room, User} from "../types";
-import { rooms, winners } from "../db";
+import { ResponseType, Room, User } from "../types";
+import { currentGames, rooms, winners } from "../db";
+
+export const createGame = (roomId: string): void => {
+    const currentRoom: Room | undefined = findRoom(roomId);
+    const currentRoomPlayers: User[] = currentRoom?.roomUsers ?? [];
+
+    const currentGame = {
+        roomId,
+        players: [],
+    };
+
+    currentGames.push(currentGame);
+
+    currentRoomPlayers.forEach((player): void => {
+        const thisPlayersWebSocket = findUser(player.index)?.ws;
+
+        thisPlayersWebSocket?.send(
+            JSON.stringify({
+                type: ResponseType.CreateGame,
+                data: JSON.stringify({
+                    idGame: roomId,
+                    idPlayer: player.index,
+                }),
+                id: 0,
+            }),
+        );
+    });
+};
+
+export const findRoomIndex = (roomId: string): number => rooms.findIndex((room) => room.roomId === roomId);
 
 export const generateUid = function () : string {
     return Date.now().toString(36) + Math.random().toString(36).slice(2);

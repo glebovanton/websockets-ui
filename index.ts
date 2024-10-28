@@ -1,11 +1,18 @@
-import dotenv from 'dotenv';
+import 'dotenv/config'
 import { httpServer } from "./src/http_server";
 import { webSocketServer } from "./src/websocket"
-import { findRoom, findUser, findUserByName, generateUid, updateRooms, updateWinners } from "./src/helpers";
-import {ResponseType, User } from "./src/types";
+import {
+    createGame,
+    findRoom,
+    findRoomIndex,
+    findUser,
+    findUserByName,
+    generateUid,
+    updateRooms,
+    updateWinners
+} from "./src/helpers";
+import {ResponseType, Room, User } from "./src/types";
 import { rooms, users } from "./src/db";
-
-dotenv.config();
 
 const { HOST = 'localhost', HTTP_PORT = 8181, WEBSOCKET_PORT = 3000 } = process.env;
 
@@ -30,7 +37,7 @@ webSocketServer.on('connection', (ws) => {
             password: undefined
         };
         let existingUser: User | undefined;
-        let roomId: number | undefined;
+        let roomId: string | undefined;
 
         if (messageAsObject.data) {
             messageAsObject.data = JSON.parse(messageAsObject.data);
@@ -77,13 +84,13 @@ webSocketServer.on('connection', (ws) => {
 
             case ResponseType.CreateRoom:
                 const foundPlayer: User | undefined = findUser(id);
-                const newRoomId: string= generateUid();
+                const newRoomId: string = generateUid();
 
                 if (!foundPlayer) {
                     break;
                 }
 
-                const newRoom = {
+                const newRoom: Room = {
                     roomId: newRoomId,
                     roomUsers: [
                         {
@@ -96,6 +103,27 @@ webSocketServer.on('connection', (ws) => {
                 updateRooms(webSocketServer);
                 break;
 
+            case ResponseType.AddUserToRoom:
+                if (!roomId) {
+                    roomId = user.indexRoom;
+                }
+
+                const currentRoom: Room | undefined = roomId ? findRoom(roomId) : undefined;;
+                const currentRoomUsers: User[] = currentRoom?.roomUsers ?? [];
+                const targetUser: User | undefined = findUser(user.index || id);
+
+                if (currentRoom && targetUser && !currentRoomUsers.find((roomUser) => roomUser.index === targetUser.index)) {
+                    currentRoom.roomUsers.push(targetUser);
+                }
+
+                updateRooms(webSocketServer);
+
+                if (currentRoomUsers.length > 1) {
+                    createGame(roomId as string);
+                    const currentRoomIndex: number = findRoomIndex(roomId as string);
+                    rooms.splice(currentRoomIndex, 1);
+                }
+                break;
 
         }
     });
