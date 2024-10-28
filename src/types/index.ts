@@ -24,6 +24,12 @@ export interface User {
     error?: boolean;
     errorText?: string;
     ws?: WebSocket;
+    x?: number;
+    y?: number;
+    board?: boolean[][];
+    hitBoard?: boolean[][];
+    ships?: any[];
+    shipsWrecked?: number;
 }
 
 export interface Room {
@@ -32,6 +38,17 @@ export interface Room {
 }
 
 export interface Game {
+    idOfPlayersTurn: string;
     roomId: string;
     players: User[]
+}
+
+export interface ShipTakenShots {
+    x1: number;
+    y1: number
+}
+
+export interface Winner {
+    name: string;
+    wins: number;
 }

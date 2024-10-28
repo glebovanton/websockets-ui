@@ -1,8 +1,11 @@
+import { WebSocketServer } from "ws";
 import 'dotenv/config'
 import { httpServer } from "./src/http_server";
 import { webSocketServer } from "./src/websocket"
 import {
+    attackFeedback,
     createGame,
+    findEnemy,
     findRoom,
     findRoomIndex,
     findUser,
@@ -22,7 +25,7 @@ httpServer.listen(HTTP_PORT, ()=> {
     console.log(`Websocket on the ${WEBSOCKET_PORT} port!`);
 });
 
-webSocketServer.on('connection', (ws) => {
+webSocketServer.on('connection', (ws: WebSocketServer): void => {
     const id: string = generateUid();
 
     ws.on('message', (data) => {
@@ -41,6 +44,11 @@ webSocketServer.on('connection', (ws) => {
         let roomId: string | undefined;
         let gameId: string | undefined;
         let currentGame: Game | undefined;
+        let indexPlayer: string | undefined;
+        let x: number | undefined;
+        let y: number | undefined;
+        let hitBoard: boolean[][] | undefined;
+        let board: boolean[][] | undefined;
 
         if (messageAsObject.data) {
             messageAsObject.data = JSON.parse(messageAsObject.data);
@@ -135,6 +143,20 @@ webSocketServer.on('connection', (ws) => {
 
                 if (currentGame?.players && currentGame.players.length > 1) {
                     startGame(currentGame);
+                }
+                break;
+
+            case ResponseType.Attack:
+                ({ indexPlayer, gameId, x, y } = user);
+                currentGame = currentGames.find((game) => game.roomId === gameId);
+                currentGame && indexPlayer && ({ board, hitBoard } = findEnemy(currentGame, indexPlayer));
+
+                if ((currentGame?.idOfPlayersTurn === indexPlayer) && x && y && !hitBoard?.[y][x]) {
+                    hitBoard && ( hitBoard[y][x] = true );
+
+                    if (currentGame && indexPlayer && board && hitBoard) {
+                        attackFeedback(currentGame, indexPlayer, board, hitBoard, x, y, webSocketServer);
+                    }
                 }
                 break;
 
